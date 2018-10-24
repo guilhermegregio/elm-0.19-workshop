@@ -15,7 +15,6 @@ import Viewer exposing (Viewer)
 import Viewer.Cred as Cred exposing (Cred)
 
 
-
 -- MODEL
 
 
@@ -86,11 +85,7 @@ viewForm form =
             [ input
                 [ class "form-control form-control-lg"
                 , placeholder "Username"
-
-                {- 👉 TODO: when the user inputs a username, update it in the Model.
-
-                   💡 HINT: Look at how the Email input below does this. 👇
-                -}
+                , onInput EnteredUsername
                 , value form.username
                 ]
                 []
@@ -130,7 +125,7 @@ viewProblem problem =
                 ServerError str ->
                     str
     in
-    li [] [ text errorMessage ]
+        li [] [ text errorMessage ]
 
 
 
@@ -140,6 +135,7 @@ viewProblem problem =
 type Msg
     = SubmittedForm
     | EnteredEmail String
+    | EnteredUsername String
     | EnteredPassword String
     | CompletedRegister (Result Http.Error Viewer)
     | GotSession Session
@@ -148,6 +144,9 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        EnteredUsername username ->
+            updateForm (\form -> { form | username = username }) model
+
         EnteredEmail email ->
             updateForm (\form -> { form | email = email }) model
 
@@ -172,9 +171,9 @@ update msg model =
                     Api.decodeErrors error
                         |> List.map ServerError
             in
-            ( { model | problems = List.append model.problems serverErrors }
-            , Cmd.none
-            )
+                ( { model | problems = List.append model.problems serverErrors }
+                , Cmd.none
+                )
 
         CompletedRegister (Ok viewer) ->
             ( model
@@ -248,12 +247,12 @@ validate form =
         trimmedForm =
             trimFields form
     in
-    case List.concatMap (validateField trimmedForm) fieldsToValidate of
-        [] ->
-            Ok trimmedForm
+        case List.concatMap (validateField trimmedForm) fieldsToValidate of
+            [] ->
+                Ok trimmedForm
 
-        problems ->
-            Err problems
+            problems ->
+                Err problems
 
 
 validateField : TrimmedForm -> ValidatedField -> List Problem
@@ -263,24 +262,20 @@ validateField (Trimmed form) field =
             Username ->
                 if String.isEmpty form.username then
                     [ "username can't be blank." ]
-
                 else
                     []
 
             Email ->
                 if String.isEmpty form.email then
                     [ "email can't be blank." ]
-
                 else
                     []
 
             Password ->
                 if String.isEmpty form.password then
                     [ "password can't be blank." ]
-
                 else if String.length form.password < Viewer.minPasswordChars then
                     [ "password must be at least " ++ String.fromInt Viewer.minPasswordChars ++ " characters long." ]
-
                 else
                     []
 
@@ -315,5 +310,5 @@ register (Trimmed form) =
             Encode.object [ ( "user", user ) ]
                 |> Http.jsonBody
     in
-    Decode.field "user" Viewer.decoder
-        |> Http.post (Api.url [ "users" ]) body
+        Decode.field "user" Viewer.decoder
+            |> Http.post (Api.url [ "users" ]) body
